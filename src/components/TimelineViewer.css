@@ -47,15 +47,14 @@
 /* Container */
 .timeline-container {
     min-height: 100vh;
-    padding: 3rem 1rem;
     background-color: #ffffff;
     position: relative;
-    padding-bottom: 6rem; /* Espace pour la banderole */
+    /* Espace pour la banderole */
+    padding: 3rem 1rem 6rem;
 }
 
 .timeline-container.mobile {
-    padding: 2rem 1rem;
-    padding-bottom: 6rem;
+    padding: 2rem 1rem 6rem;
 }
 
 /* Background Grid */
