@@ -302,7 +302,7 @@ function TimelineViewer() {
                             }}>
                               {event.moderator && (
                                 <p style={{ margin: 0 }}>
-                                  <span style={{ fontWeight: '600', color: '#4f46e5' }}>
+                                  <span style={{ fontWeight: '600', color: '#e9967a', borderBottom: '1px solid #e9967a'}}>
                                     Modérateur:
                                   </span>{' '}
                                   {event.moderator}
@@ -310,7 +310,7 @@ function TimelineViewer() {
                               )}
                               {event.speakers && (
                                 <p style={{ margin: 0 }}>
-                                  <span style={{ fontWeight: '600', color: '#4f46e5' }}>
+                                  <span style={{ fontWeight: '600', color: '#5f9ea0', borderBottom: '1px solid #5f9ea0'}}>
                                     Intervenants:
                                   </span>{' '}
                                   {event.speakers}
