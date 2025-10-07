@@ -86,11 +86,11 @@ function TimelineViewer() {
           overflow: 'hidden',
           zIndex: 0
         }}>
-          <div style={{ background: '#f9f9f9' }}></div>
-          <div style={{ background: '#f9f9f9' }}></div>
-          <div style={{ background: '#f9f9f9' }}></div>
-          <div style={{ background: '#f9f9f9' }}></div>
-          <div style={{ background: '#f9f9f9' }}></div>
+          <div style={{ background: 'rgb(253 253 253)' }}></div>
+          <div style={{ background: 'rgb(253 253 253)' }}></div>
+          <div style={{ background: 'rgb(253 253 253)' }}></div>
+          <div style={{ background: 'rgb(253 253 253)' }}></div>
+          <div style={{ background: 'rgb(253 253 253)' }}></div>
         </div>
         <div style={{ fontSize: '1.125rem', color: '#666', position: 'relative', zIndex: 1 }}>
           Chargement de la timeline...
@@ -123,11 +123,11 @@ function TimelineViewer() {
         overflow: 'hidden',
         zIndex: 0
       }}>
-        {/* <div style={{ background: '#f9f9f9' }}></div>
-        <div style={{ background: '#f9f9f9' }}></div>
-        <div style={{ background: '#f9f9f9' }}></div>
-        <div style={{ background: '#f9f9f9' }}></div>
-        <div style={{ background: '#f9f9f9' }}></div> */}
+        <div style={{ background: 'rgb(253 253 253)' }}></div>
+        <div style={{ background: 'rgb(253 253 253)' }}></div>
+        <div style={{ background: 'rgb(253 253 253)' }}></div>
+        <div style={{ background: 'rgb(253 253 253)' }}></div>
+        <div style={{ background: 'rgb(253 253 253)' }}></div> 
       </div>
 
       <div style={{ maxWidth: '960px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
@@ -283,9 +283,9 @@ function TimelineViewer() {
                           {/* Titre */}
                           <h3 style={{ 
                             fontSize: '1rem', 
-                            fontWeight: 'bold',
+                            fontWeight: '500',
                             marginBottom: '0.75rem',
-                            color: '#1a1a1a',
+                            color: 'rgb(85 85 85)',
                             margin: '0 0 0.75rem 0'
                           }}>
                             {event.title}
