@@ -277,7 +277,7 @@ function TimelineViewer() {
                           backgroundColor: 'white',
                           borderRadius: '8px',
                           padding: '1rem 1.25rem',
-                          boxShadow: '0px 17px 34px -26px rgba(0,0,0,0.1)',
+                          boxShadow: '0px 17px 39px -8px rgba(0,0,0,0.1)',
                           // borderLeft: event.type === 'break' ? '4px solid #c9a9e0' : '4px solid #8b9dc3'
                         }}>
                           {/* Titre */}
