@@ -1,23 +1,42 @@
-import logo from './logo.svg';
+import { useState, useEffect } from 'react';
 import './App.css';
+import Login from './components/Login';
+import AdminPanel from './components/AdminPanel';
+import TimelineViewer from './components/TimelineViewer';
 
 function App() {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+
+  // Vérifier si l'URL contient le paramètre admin
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('admin')) {
+      setShowAdminLogin(true);
+    }
+  }, []);
+
+  const handleLogin = (success) => {
+    if (success) {
+      setIsAdmin(true);
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAdmin(false);
+    setShowAdminLogin(false);
+    // Retirer le paramètre admin de l'URL
+    window.history.replaceState({}, document.title, '/');
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      {/* Mode Admin */}
+      {showAdminLogin && !isAdmin && <Login onLogin={handleLogin} />}
+      {isAdmin && <AdminPanel onLogout={handleLogout} />}
+      
+      {/* Mode Spectateur (par défaut) */}
+      {!showAdminLogin && !isAdmin && <TimelineViewer />}
     </div>
   );
 }
