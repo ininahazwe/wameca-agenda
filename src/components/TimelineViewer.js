@@ -5,6 +5,7 @@ import { database } from '../firebase';
 function TimelineViewer() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
     const eventsRef = ref(database, 'events');
@@ -39,8 +40,18 @@ function TimelineViewer() {
       setLoading(false);
     });
 
-    // Nettoyage de l'écouteur
-    return () => unsubscribe();
+    // Détection du redimensionnement
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    // Nettoyage
+    return () => {
+      unsubscribe();
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   // Fonction pour formater la date en français
@@ -105,7 +116,7 @@ function TimelineViewer() {
   return (
     <div style={{ 
       minHeight: '100vh', 
-      padding: '3rem 1rem',
+      padding: isMobile ? '2rem 1rem' : '3rem 1rem',
       backgroundColor: '#ffffff',
       position: 'relative'
     }}>
@@ -116,7 +127,7 @@ function TimelineViewer() {
         left: 0,
         width: '100%',
         height: '100vh',
-        display: 'grid',
+        display: isMobile ? 'none' : 'grid',
         gridTemplateColumns: '16vw 16vw 16vw 16vw 16vw',
         gridColumnGap: '5vw',
         pointerEvents: 'none',
@@ -130,11 +141,17 @@ function TimelineViewer() {
         <div style={{ background: 'rgb(253 253 253)' }}></div> 
       </div>
 
-      <div style={{ maxWidth: '960px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+      <div style={{ 
+        maxWidth: '960px', 
+        margin: '0 auto', 
+        position: 'relative', 
+        zIndex: 1,
+        paddingLeft: isMobile ? '0' : '0'
+      }}>
         {/* En-tête */}
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: isMobile ? '2rem' : '3rem' }}>
           <h1 style={{ 
-            fontSize: '2.5rem', 
+            fontSize: isMobile ? '2rem' : '2.5rem', 
             fontWeight: 'bold', 
             marginBottom: '0.5rem',
             color: '#1a1a1a',
@@ -143,9 +160,10 @@ function TimelineViewer() {
             WAMECA
           </h1>
           <p style={{ 
-            fontSize: '1rem', 
+            fontSize: isMobile ? '0.875rem' : '1rem', 
             color: '#666',
-            marginBottom: '0.25rem'
+            marginBottom: '0.25rem',
+            padding: isMobile ? '0 1rem' : '0'
           }}>
             Journalism and Digital Public Infrastructure in Africa
           </p>
@@ -173,33 +191,37 @@ function TimelineViewer() {
             {/* Ligne verticale */}
             <div style={{ 
               position: 'absolute',
-              left: '0',
+              left: isMobile ? '0.5rem' : '0',
               top: '0',
               bottom: '0',
               width: '3px',
               backgroundColor: 'rgb(159, 159, 237)',
-              marginLeft: '1.3rem'
+              marginLeft: isMobile ? '0' : '1.3rem'
             }}></div>
 
             {/* Événements groupés par date */}
             {dates.map((date) => (
               <div key={date} style={{ marginBottom: '2rem' }}>
                 {/* Marqueur de date */}
-                <div style={{ position: 'relative', marginBottom: '2rem' }}>
+                <div style={{ position: 'relative', marginBottom: isMobile ? '1.5rem' : '2rem' }}>
                   <div style={{ 
                     position: 'absolute',
-                    left: '0',
-                    width: '2.5rem',
-                    height: '2.5rem',
+                    left: isMobile ? '0' : '0',
+                    width: isMobile ? '2rem' : '2.5rem',
+                    height: isMobile ? '2rem' : '2.5rem',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: 'rgb(159, 159, 237)',
-                    marginLeft: '0.15rem'
+                    marginLeft: isMobile ? '0' : '0.15rem'
                   }}>
                     <svg 
-                      style={{ width: '1.25rem', height: '1.25rem', color: 'white' }}
+                      style={{ 
+                        width: isMobile ? '1rem' : '1.25rem', 
+                        height: isMobile ? '1rem' : '1.25rem', 
+                        color: 'white' 
+                      }}
                       fill="currentColor" 
                       viewBox="0 0 20 20"
                     >
@@ -211,14 +233,14 @@ function TimelineViewer() {
                     </svg>
                   </div>
                   <div style={{
-                    marginLeft: '4.5rem',
+                    marginLeft: isMobile ? '3rem' : '4.5rem',
                     backgroundColor: 'rgb(242, 223, 215)',
                     borderRadius: '8px',
-                    padding: '0.75rem 1rem',
+                    padding: isMobile ? '0.5rem 0.75rem' : '0.75rem 1rem',
                     borderLeft: '4px solid #8b9dc3'
                   }}>
                     <h2 style={{ 
-                      fontSize: '1.125rem', 
+                      fontSize: isMobile ? '0.875rem' : '1.125rem', 
                       fontWeight: 'bold',
                       color: '#1a1a1a',
                       textTransform: 'capitalize',
@@ -230,33 +252,34 @@ function TimelineViewer() {
                 </div>
 
                 {/* Événements de cette date */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1rem' : '1.5rem' }}>
                   {groupedEvents[date].map((event) => (
                     <div key={event.id} style={{ position: 'relative' }}>
                       {/* Point sur la ligne */}
                       <div style={{ 
                         position: 'absolute',
-                        left: '0',
-                        width: '1rem',
-                        height: '1rem',
+                        left: isMobile ? '0.25rem' : '0',
+                        width: isMobile ? '0.75rem' : '1rem',
+                        height: isMobile ? '0.75rem' : '1rem',
                         borderRadius: '50%',
                         backgroundColor: event.type === 'break' ? '#c9a9e0' : 'rgb(212, 193, 236)',
-                        marginLeft: '0.9rem',
-                        marginTop: '0.5rem'
+                        marginLeft: isMobile ? '0' : '0.9rem',
+                        marginTop: isMobile ? '0.5rem' : '0.5rem'
                       }}></div>
 
                       {/* Conteneur événement */}
                       <div style={{ 
-                        marginLeft: '4.5rem',
+                        marginLeft: isMobile ? '3rem' : '4.5rem',
                         display: 'flex',
-                        gap: '1rem',
-                        alignItems: 'flex-start'
+                        flexDirection: isMobile ? 'column' : 'row',
+                        gap: isMobile ? '0.5rem' : '1rem',
+                        alignItems: isMobile ? 'stretch' : 'flex-start'
                       }}>
                         {/* Timestamp */}
                         <div style={{
                           flexShrink: 0,
-                          minWidth: '120px',
-                          paddingTop: '0.5rem'
+                          minWidth: isMobile ? 'auto' : '120px',
+                          paddingTop: isMobile ? '0' : '0.5rem'
                         }}>
                           <div style={{
                             display: 'inline-block',
@@ -276,13 +299,12 @@ function TimelineViewer() {
                           flex: 1,
                           backgroundColor: 'white',
                           borderRadius: '8px',
-                          padding: '1rem 1.25rem',
-                          boxShadow: '0px 17px 39px -8px rgba(0,0,0,0.1)',
-                          // borderLeft: event.type === 'break' ? '4px solid #c9a9e0' : '4px solid #8b9dc3'
+                          padding: isMobile ? '0.875rem 1rem' : '1rem 1.25rem',
+                          boxShadow: '0px 17px 39px -8px rgba(0,0,0,0.1)'
                         }}>
                           {/* Titre */}
                           <h3 style={{ 
-                            fontSize: '1rem', 
+                            fontSize: isMobile ? '0.9375rem' : '1rem', 
                             fontWeight: '500',
                             marginBottom: '0.75rem',
                             color: 'rgb(85 85 85)',
@@ -297,7 +319,7 @@ function TimelineViewer() {
                               display: 'flex',
                               flexDirection: 'column',
                               gap: '0.5rem',
-                              fontSize: '0.875rem',
+                              fontSize: isMobile ? '0.8125rem' : '0.875rem',
                               color: '#555'
                             }}>
                               {event.moderator && (
