@@ -14,7 +14,7 @@ function Login({ onLogin }) {
       onLogin(true);
       setError('');
     } else {
-      setError('Mot de passe incorrect');
+      setError('Wrong password');
       setPassword('');
     }
   };

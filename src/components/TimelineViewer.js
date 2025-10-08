@@ -1,75 +1,100 @@
 import { useState, useEffect } from 'react';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../firebase';
-import { useLanguage } from '../contexts/LanguageContext';
-import LanguageSelector from './LanguageSelector';
+import './TimelineViewer.css';
+import logo from '../assets/wameca.png';
+
+const translations = {
+  en: {
+    title: 'WAMECA',
+    subtitle: 'Journalism and Digital Public Infrastructure in Africa',
+    edition: '— 2025 Edition',
+    loading: 'Loading timeline...',
+    noEvents: 'No scheduled events at the moment',
+    moderator: 'Moderator:',
+    speakers: 'Speakers:',
+    break: '☕ Break',
+    dateFormat: 'en-US'
+  },
+  fr: {
+    title: 'WAMECA',
+    subtitle: 'JJournalisme et infrastructures publiques numériques en Afrique',
+    edition: '— Édition 2025',
+    loading: 'Chargement de la timeline...',
+    noEvents: 'Aucun événement programmé pour le moment',
+    moderator: 'Modérateur:',
+    speakers: 'Intervenants:',
+    break: '☕ Pause',
+    dateFormat: 'fr-FR'
+  },
+  pt: {
+    title: 'WAMECA',
+    subtitle: 'Jornalismo e Infraestruturas Públicas Digitais em África',
+    edition: '— Edição 2025',
+    loading: 'Carregando cronograma...',
+    noEvents: 'Nenhum evento programado no momento',
+    moderator: 'Moderador:',
+    speakers: 'Palestrantes:',
+    break: '☕ Intervalo',
+    dateFormat: 'pt-PT'
+  }
+};
 
 function TimelineViewer() {
-  const { t, language } = useLanguage();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [language, setLanguage] = useState('en');
+
+  const t = translations[language];
 
   useEffect(() => {
     const eventsRef = ref(database, 'events');
-    
-    // Écoute en temps réel des changements
+
     const unsubscribe = onValue(eventsRef, (snapshot) => {
       const data = snapshot.val();
-      
+
       if (data) {
-        // Convertir l'objet en tableau
         const eventsArray = Object.keys(data).map(key => ({
           id: key,
           ...data[key]
         }));
-        
-        // Filtrer uniquement les événements publiés
+
         const publishedEvents = eventsArray.filter(event => event.published !== false);
-        
-        // Trier par date puis par heure de début
+
         publishedEvents.sort((a, b) => {
           if (a.date !== b.date) {
             return a.date.localeCompare(b.date);
           }
           return a.startTime.localeCompare(b.startTime);
         });
-        
+
         setEvents(publishedEvents);
       } else {
         setEvents([]);
       }
-      
+
       setLoading(false);
     });
 
-    // Détection du redimensionnement
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
 
     window.addEventListener('resize', handleResize);
 
-    // Nettoyage
     return () => {
       unsubscribe();
       window.removeEventListener('resize', handleResize);
     };
   }, []);
 
-  // Fonction pour formater la date selon la langue
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    const localeMap = {
-      en: 'en-US',
-      fr: 'fr-FR',
-      pt: 'pt-PT'
-    };
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    return date.toLocaleDateString(localeMap[language] || 'fr-FR', options);
+    return date.toLocaleDateString(t.dateFormat, options);
   };
 
-  // Grouper les événements par date
   const groupEventsByDate = (events) => {
     const grouped = {};
     events.forEach(event => {
@@ -81,324 +106,238 @@ function TimelineViewer() {
     return grouped;
   };
 
-  // Fonction pour obtenir le texte dans la langue appropriée
-  const getLocalizedText = (textObj) => {
-    if (!textObj) return '';
-    
-    // Si c'est un objet avec des traductions
-    if (typeof textObj === 'object' && textObj !== null) {
-      return textObj[language] || textObj.fr || textObj.en || textObj.pt || '';
+  const getLocalizedValue = (value) => {
+    if (typeof value === 'object' && value !== null) {
+      return value[language] || value.en || '';
     }
-    
-    // Si c'est juste une chaîne
-    return textObj;
+    return value || '';
   };
 
   if (loading) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        backgroundColor: '#ffffff',
-        position: 'relative'
-      }}>
-        {/* Grille de fond */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100vh',
-          display: 'grid',
-          gridTemplateColumns: '16vw 16vw 16vw 16vw 16vw',
-          gridColumnGap: '5vw',
-          pointerEvents: 'none',
-          overflow: 'hidden',
-          zIndex: 0
-        }}>
-          <div style={{ background: 'rgb(253 253 253)' }}></div>
-          <div style={{ background: 'rgb(253 253 253)' }}></div>
-          <div style={{ background: 'rgb(253 253 253)' }}></div>
-          <div style={{ background: 'rgb(253 253 253)' }}></div>
-          <div style={{ background: 'rgb(253 253 253)' }}></div>
+        <div className="timeline-container">
+          <div className="timeline-grid">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+          </div>
+          <div className="timeline-loading">
+            {t.loading}
+          </div>
         </div>
-        <div style={{ fontSize: '1.125rem', color: '#666', position: 'relative', zIndex: 1 }}>
-          {t('loading')}
-        </div>
-      </div>
     );
   }
 
   const groupedEvents = groupEventsByDate(events);
   const dates = Object.keys(groupedEvents).sort();
 
+  // Calculer le nombre total d'éléments pour les animations
+  let animationIndex = 0;
+
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      padding: isMobile ? '2rem 1rem' : '3rem 1rem',
-      backgroundColor: '#ffffff',
-      position: 'relative'
-    }}>
-      {/* Sélecteur de langue */}
-      <div style={{ 
-        position: 'fixed', 
-        top: '1rem', 
-        right: '1rem', 
-        zIndex: 1000 
-      }}>
-        <LanguageSelector />
-      </div>
-
-      {/* Grille de fond */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100vh',
-        display: isMobile ? 'none' : 'grid',
-        gridTemplateColumns: '16vw 16vw 16vw 16vw 16vw',
-        gridColumnGap: '5vw',
-        pointerEvents: 'none',
-        overflow: 'hidden',
-        zIndex: 0
-      }}>
-        <div style={{ background: 'rgb(253 253 253)' }}></div>
-        <div style={{ background: 'rgb(253 253 253)' }}></div>
-        <div style={{ background: 'rgb(253 253 253)' }}></div>
-        <div style={{ background: 'rgb(253 253 253)' }}></div>
-        <div style={{ background: 'rgb(253 253 253)' }}></div> 
-      </div>
-
-      <div style={{ 
-        maxWidth: '960px', 
-        margin: '0 auto', 
-        position: 'relative', 
-        zIndex: 1,
-        paddingLeft: isMobile ? '0' : '0'
-      }}>
-        {/* En-tête */}
-        <div style={{ textAlign: 'center', marginBottom: isMobile ? '2rem' : '3rem' }}>
-          <h1 style={{ 
-            fontSize: isMobile ? '2rem' : '2.5rem', 
-            fontWeight: 'bold', 
-            marginBottom: '0.5rem',
-            color: '#1a1a1a',
-            fontFamily: 'Georgia, serif'
-          }}>
-            {t('title')}
-          </h1>
-          <p style={{ 
-            fontSize: isMobile ? '0.875rem' : '1rem', 
-            color: '#666',
-            marginBottom: '0.25rem',
-            padding: isMobile ? '0 1rem' : '0'
-          }}>
-            {t('subtitle')}
-          </p>
-          <p style={{ 
-            fontSize: '0.875rem', 
-            color: '#999'
-          }}>
-            — {t('edition')}
-          </p>
+      <div className={`timeline-container ${isMobile ? 'mobile' : ''}`}>
+        <div className="timeline-grid">
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
         </div>
 
-        {events.length === 0 ? (
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '2rem',
-            textAlign: 'center',
-            color: '#999',
-            fontSize: '0.875rem'
-          }}>
-            {t('noEventsScheduled')}
+        <div className="timeline-content">
+          {/* Language Switcher */}
+          <div className="language-switcher">
+            <button
+                onClick={() => setLanguage('en')}
+                className={`lang-btn ${language === 'en' ? 'active' : ''}`}
+            >
+              EN
+            </button>
+            <button
+                onClick={() => setLanguage('fr')}
+                className={`lang-btn ${language === 'fr' ? 'active' : ''}`}
+            >
+              FR
+            </button>
+            <button
+                onClick={() => setLanguage('pt')}
+                className={`lang-btn ${language === 'pt' ? 'active' : ''}`}
+            >
+              PT
+            </button>
           </div>
-        ) : (
-          <div style={{ position: 'relative' }}>
-            {/* Ligne verticale */}
-            <div style={{ 
-              position: 'absolute',
-              left: isMobile ? '0.5rem' : '0',
-              top: '0',
-              bottom: '0',
-              width: '3px',
-              backgroundColor: 'rgb(159, 159, 237)',
-              marginLeft: isMobile ? '0' : '1.3rem'
-            }}></div>
 
-            {/* Événements groupés par date */}
-            {dates.map((date) => (
-              <div key={date} style={{ marginBottom: '2rem' }}>
-                {/* Marqueur de date */}
-                <div style={{ position: 'relative', marginBottom: isMobile ? '1.5rem' : '2rem' }}>
-                  <div style={{ 
-                    position: 'absolute',
-                    left: isMobile ? '0' : '0',
-                    width: isMobile ? '2rem' : '2.5rem',
-                    height: isMobile ? '2rem' : '2.5rem',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: 'rgb(159, 159, 237)',
-                    marginLeft: isMobile ? '0' : '0.15rem'
-                  }}>
-                    <svg 
-                      style={{ 
-                        width: isMobile ? '1rem' : '1.25rem', 
-                        height: isMobile ? '1rem' : '1.25rem', 
-                        color: 'white' 
-                      }}
-                      fill="currentColor" 
-                      viewBox="0 0 20 20"
-                    >
-                      <path 
-                        fillRule="evenodd" 
-                        d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" 
-                        clipRule="evenodd" 
-                      />
-                    </svg>
-                  </div>
-                  <div style={{
-                    marginLeft: isMobile ? '3rem' : '4.5rem',
-                    backgroundColor: 'rgb(242, 223, 215)',
-                    borderRadius: '8px',
-                    padding: isMobile ? '0.5rem 0.75rem' : '0.75rem 1rem',
-                    borderLeft: '4px solid #8b9dc3'
-                  }}>
-                    <h2 style={{ 
-                      fontSize: isMobile ? '0.875rem' : '1.125rem', 
-                      fontWeight: 'bold',
-                      color: '#1a1a1a',
-                      textTransform: 'capitalize',
-                      margin: 0
-                    }}>
-                      {formatDate(date)}
-                    </h2>
-                  </div>
-                </div>
+          {/* Header */}
+          <div className="timeline-header">
+            <h1 className="timeline-title">
+              {/* {t.title} */}
+              <img src={logo} alt="Logo" width={120}/>
+            </h1>
+            <p className="timeline-subtitle">
+              {t.subtitle}
+            </p>
+            <p className="timeline-edition">
+              {t.edition}
+            </p>
+          </div>
 
-                {/* Événements de cette date */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1rem' : '1.5rem' }}>
-                  {groupedEvents[date].map((event) => (
-                    <div key={event.id} style={{ position: 'relative' }}>
-                      {/* Point sur la ligne */}
-                      <div style={{ 
-                        position: 'absolute',
-                        left: isMobile ? '0.25rem' : '0',
-                        width: isMobile ? '0.75rem' : '1rem',
-                        height: isMobile ? '0.75rem' : '1rem',
-                        borderRadius: '50%',
-                        backgroundColor: event.type === 'break' ? '#c9a9e0' : 'rgb(212, 193, 236)',
-                        marginLeft: isMobile ? '0' : '0.9rem',
-                        marginTop: isMobile ? '0.5rem' : '0.5rem'
-                      }}></div>
+          {events.length === 0 ? (
+              <div className="timeline-no-events">
+                {t.noEvents}
+              </div>
+          ) : (
+              <div className="timeline-events">
+                <div className="timeline-line"></div>
 
-                      {/* Conteneur événement */}
-                      <div style={{ 
-                        marginLeft: isMobile ? '3rem' : '4.5rem',
-                        display: 'flex',
-                        flexDirection: isMobile ? 'column' : 'row',
-                        gap: isMobile ? '0.5rem' : '1rem',
-                        alignItems: isMobile ? 'stretch' : 'flex-start'
-                      }}>
-                        {/* Timestamp */}
-                        <div style={{
-                          flexShrink: 0,
-                          minWidth: isMobile ? 'auto' : '120px',
-                          paddingTop: isMobile ? '0' : '0.5rem'
-                        }}>
-                          <div style={{
-                            display: 'inline-block',
-                            padding: '0.375rem 0.75rem',
-                            borderRadius: '6px',
-                            fontSize: '0.75rem',
-                            fontWeight: '600',
-                            backgroundColor: event.type === 'break' ? '#f3e8ff' : '#d4c1ec',
-                            color: event.type === 'break' ? '#7c3aed' : '#0c0c0c'
-                          }}>
-                            {event.startTime} - {event.endTime}
+                {dates.map((date, dateIndex) => {
+                  const dateGroupEvents = groupedEvents[date];
+
+                  return (
+                      <div key={date} className="date-group">
+                        {/* Date Marker */}
+                        <div
+                            className="date-marker-container"
+                            style={{
+                              animationDelay: `${1 + animationIndex * 0.1}s`
+                            }}
+                        >
+                          <div className="date-marker-icon">
+                            <svg
+                                className="calendar-icon"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                            >
+                              <path
+                                  fillRule="evenodd"
+                                  d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                                  clipRule="evenodd"
+                              />
+                            </svg>
+                          </div>
+                          <div className="date-marker-label">
+                            <h2 className="date-text">
+                              {formatDate(date)}
+                            </h2>
                           </div>
                         </div>
 
-                        {/* Carte d'événement */}
-                        <div style={{
-                          flex: 1,
-                          backgroundColor: 'white',
-                          borderRadius: '8px',
-                          padding: isMobile ? '0.875rem 1rem' : '1rem 1.25rem',
-                          boxShadow: '0px 17px 39px -8px rgba(0,0,0,0.1)'
-                        }}>
-                          {/* Titre */}
-                          <h3 style={{ 
-                            fontSize: isMobile ? '0.9375rem' : '1rem', 
-                            fontWeight: '500',
-                            marginBottom: '0.75rem',
-                            color: 'rgb(85 85 85)',
-                            margin: '0 0 0.75rem 0'
-                          }}>
-                            {getLocalizedText(event.title)}
-                          </h3>
+                        {/* Events for this date */}
+                        <div className="events-list">
+                          {dateGroupEvents.map((event, eventIndex) => {
+                            animationIndex++;
+                            const delay = 1 + animationIndex * 0.1;
 
-                          {/* Détails pour les sessions */}
-                          {event.type === 'session' && (event.moderator || event.speakers) && (
-                            <div style={{ 
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '0.5rem',
-                              fontSize: isMobile ? '0.8125rem' : '0.875rem',
-                              color: '#555'
-                            }}>
-                              {event.moderator && (
-                                <p style={{ margin: 0 }}>
-                                  <span style={{ fontWeight: '600', color: '#e9967a', borderBottom: '1px solid #e9967a'}}>
-                                    {t('moderator')}:
-                                  </span>{' '}
-                                  {getLocalizedText(event.moderator)}
-                                </p>
-                              )}
-                              {event.speakers && (
-                                <p style={{ margin: 0 }}>
-                                  <span style={{ fontWeight: '600', color: '#5f9ea0', borderBottom: '1px solid #5f9ea0'}}>
-                                    {t('speakers')}:
-                                  </span>{' '}
-                                  {getLocalizedText(event.speakers)}
-                                </p>
-                              )}
-                            </div>
-                          )}
+                            return (
+                                <div
+                                    key={event.id}
+                                    className="event-item"
+                                    style={{
+                                      animationDelay: `${delay}s`
+                                    }}
+                                >
+                                  <div className={`event-dot ${event.type}`}></div>
 
-                          {/* Badge pour les pauses */}
-                          {event.type === 'break' && (
-                            <div style={{ marginTop: '0.5rem' }}>
-                              <span style={{
-                                display: 'inline-block',
-                                padding: '0.25rem 0.75rem',
-                                borderRadius: '9999px',
-                                fontSize: '0.75rem',
-                                fontWeight: '600',
-                                backgroundColor: '#f3e8ff',
-                                color: '#7c3aed'
-                              }}>
-                                ☕ {t('breakBadge')}
-                              </span>
-                            </div>
-                          )}
+                                  <div className="event-content">
+                                    {/* Timestamp */}
+                                    <div className="event-time-container">
+                                      <div className={`event-time ${event.type}`}>
+                                        {event.startTime} - {event.endTime}
+                                      </div>
+                                    </div>
+
+                                    {/* Event Card */}
+                                    <div className="event-card">
+                                      <h3 className="event-title">
+                                        {getLocalizedValue(event.title)}
+                                      </h3>
+
+                                      {event.type === 'session' && (getLocalizedValue(event.moderator) || getLocalizedValue(event.speakers)) && (
+                                          <div className="event-details">
+                                            {getLocalizedValue(event.moderator) && (
+                                                <p className="event-detail">
+                                      <span className="detail-label moderator">
+                                        {t.moderator}
+                                      </span>{' '}
+                                                  {getLocalizedValue(event.moderator)}
+                                                </p>
+                                            )}
+                                            {getLocalizedValue(event.speakers) && (
+                                                <p className="event-detail">
+                                      <span className="detail-label speakers">
+                                        {t.speakers}
+                                      </span>{' '}
+                                                  {getLocalizedValue(event.speakers)}
+                                                </p>
+                                            )}
+                                          </div>
+                                      )}
+
+                                      {event.type === 'break' && (
+                                          <div className="event-badge-container">
+                                  <span className="event-badge">
+                                    {t.break}
+                                  </span>
+                                          </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                            );
+                          })}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                  );
+                })}
+              </div>
+          )}
+        </div>
+
+        {/* Social Banner - Appears after timeline animations */}
+        {events.length > 0 && (
+            <div className="social-banner">
+              <div className="social-banner-content">
+                <p className="social-banner-text">{t.socialText}</p>
+                <div className="social-links">
+                  <a
+                      href="https://web.facebook.com/themfwa"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="social-link"
+                      aria-label="Facebook"
+                  >
+                    <svg fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                  </a>
+                  <a
+                      href="https://www.instagram.com/themfwa/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="social-link"
+                      aria-label="Instagram"
+                  >
+                    <svg fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                    </svg>
+                  </a>
+                  <a
+                      href="https://x.com/TheMFWA/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="social-link"
+                      aria-label="Twitter"
+                  >
+                    <svg fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                    </svg>
+                  </a>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
         )}
       </div>
-    </div>
   );
 }
 
