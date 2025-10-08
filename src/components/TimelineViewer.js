@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../firebase';
+import { useLanguage } from '../contexts/LanguageContext';
+import LanguageSelector from './LanguageSelector';
 
 function TimelineViewer() {
+  const { t, language } = useLanguage();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -54,11 +57,16 @@ function TimelineViewer() {
     };
   }, []);
 
-  // Fonction pour formater la date en français
+  // Fonction pour formater la date selon la langue
   const formatDate = (dateString) => {
     const date = new Date(dateString);
+    const localeMap = {
+      en: 'en-US',
+      fr: 'fr-FR',
+      pt: 'pt-PT'
+    };
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    return date.toLocaleDateString('fr-FR', options);
+    return date.toLocaleDateString(localeMap[language] || 'fr-FR', options);
   };
 
   // Grouper les événements par date
@@ -71,6 +79,19 @@ function TimelineViewer() {
       grouped[event.date].push(event);
     });
     return grouped;
+  };
+
+  // Fonction pour obtenir le texte dans la langue appropriée
+  const getLocalizedText = (textObj) => {
+    if (!textObj) return '';
+    
+    // Si c'est un objet avec des traductions
+    if (typeof textObj === 'object' && textObj !== null) {
+      return textObj[language] || textObj.fr || textObj.en || textObj.pt || '';
+    }
+    
+    // Si c'est juste une chaîne
+    return textObj;
   };
 
   if (loading) {
@@ -104,7 +125,7 @@ function TimelineViewer() {
           <div style={{ background: 'rgb(253 253 253)' }}></div>
         </div>
         <div style={{ fontSize: '1.125rem', color: '#666', position: 'relative', zIndex: 1 }}>
-          Chargement de la timeline...
+          {t('loading')}
         </div>
       </div>
     );
@@ -120,6 +141,16 @@ function TimelineViewer() {
       backgroundColor: '#ffffff',
       position: 'relative'
     }}>
+      {/* Sélecteur de langue */}
+      <div style={{ 
+        position: 'fixed', 
+        top: '1rem', 
+        right: '1rem', 
+        zIndex: 1000 
+      }}>
+        <LanguageSelector />
+      </div>
+
       {/* Grille de fond */}
       <div style={{
         position: 'fixed',
@@ -157,7 +188,7 @@ function TimelineViewer() {
             color: '#1a1a1a',
             fontFamily: 'Georgia, serif'
           }}>
-            WAMECA
+            {t('title')}
           </h1>
           <p style={{ 
             fontSize: isMobile ? '0.875rem' : '1rem', 
@@ -165,13 +196,13 @@ function TimelineViewer() {
             marginBottom: '0.25rem',
             padding: isMobile ? '0 1rem' : '0'
           }}>
-            Journalism and Digital Public Infrastructure in Africa
+            {t('subtitle')}
           </p>
           <p style={{ 
             fontSize: '0.875rem', 
             color: '#999'
           }}>
-            — 2025 Edition
+            — {t('edition')}
           </p>
         </div>
 
@@ -184,7 +215,7 @@ function TimelineViewer() {
             color: '#999',
             fontSize: '0.875rem'
           }}>
-            Aucun événement programmé pour le moment
+            {t('noEventsScheduled')}
           </div>
         ) : (
           <div style={{ position: 'relative' }}>
@@ -310,7 +341,7 @@ function TimelineViewer() {
                             color: 'rgb(85 85 85)',
                             margin: '0 0 0.75rem 0'
                           }}>
-                            {event.title}
+                            {getLocalizedText(event.title)}
                           </h3>
 
                           {/* Détails pour les sessions */}
@@ -325,17 +356,17 @@ function TimelineViewer() {
                               {event.moderator && (
                                 <p style={{ margin: 0 }}>
                                   <span style={{ fontWeight: '600', color: '#e9967a', borderBottom: '1px solid #e9967a'}}>
-                                    Modérateur:
+                                    {t('moderator')}:
                                   </span>{' '}
-                                  {event.moderator}
+                                  {getLocalizedText(event.moderator)}
                                 </p>
                               )}
                               {event.speakers && (
                                 <p style={{ margin: 0 }}>
                                   <span style={{ fontWeight: '600', color: '#5f9ea0', borderBottom: '1px solid #5f9ea0'}}>
-                                    Intervenants:
+                                    {t('speakers')}:
                                   </span>{' '}
-                                  {event.speakers}
+                                  {getLocalizedText(event.speakers)}
                                 </p>
                               )}
                             </div>
@@ -353,7 +384,7 @@ function TimelineViewer() {
                                 backgroundColor: '#f3e8ff',
                                 color: '#7c3aed'
                               }}>
-                                ☕ Pause
+                                ☕ {t('breakBadge')}
                               </span>
                             </div>
                           )}

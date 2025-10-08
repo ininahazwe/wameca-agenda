@@ -3,12 +3,12 @@ import './App.css';
 import Login from './components/Login';
 import AdminPanel from './components/AdminPanel';
 import TimelineViewer from './components/TimelineViewer';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
 
-  // Vérifier si l'URL contient le paramètre admin
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('admin')) {
@@ -25,19 +25,17 @@ function App() {
   const handleLogout = () => {
     setIsAdmin(false);
     setShowAdminLogin(false);
-    // Retirer le paramètre admin de l'URL
     window.history.replaceState({}, document.title, '/');
   };
 
   return (
-    <div className="App">
-      {/* Mode Admin */}
-      {showAdminLogin && !isAdmin && <Login onLogin={handleLogin} />}
-      {isAdmin && <AdminPanel onLogout={handleLogout} />}
-      
-      {/* Mode Spectateur (par défaut) */}
-      {!showAdminLogin && !isAdmin && <TimelineViewer />}
-    </div>
+    <LanguageProvider>
+      <div className="App">
+        {showAdminLogin && !isAdmin && <Login onLogin={handleLogin} />}
+        {isAdmin && <AdminPanel onLogout={handleLogout} />}
+        {!showAdminLogin && !isAdmin && <TimelineViewer />}
+      </div>
+    </LanguageProvider>
   );
 }
 
