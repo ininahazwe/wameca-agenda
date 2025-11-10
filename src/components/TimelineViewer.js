@@ -17,7 +17,7 @@ const translations = {
   },
   fr: {
     title: 'WAMECA',
-    subtitle: 'JJournalisme et infrastructures publiques numériques en Afrique',
+    subtitle: 'Journalisme et infrastructures publiques numériques en Afrique',
     edition: '— Édition 2025',
     loading: 'Chargement de la timeline...',
     noEvents: 'Aucun événement programmé pour le moment',
