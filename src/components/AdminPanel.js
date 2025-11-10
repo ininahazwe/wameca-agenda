@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { ref, onValue, push, update, remove } from 'firebase/database';
 import { database } from '../firebase';
+import { useConfig } from '../contexts/ConfigContext';
 
 function AdminPanel({ onLogout }) {
+  const config = useConfig();
   const [events, setEvents] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [activeTab, setActiveTab] = useState('en');
+  const [activeTab, setActiveTab] = useState(config.languages.default);
 
   const getTodayDate = () => {
     const today = new Date();
@@ -16,16 +18,26 @@ function AdminPanel({ onLogout }) {
     return `${year}-${month}-${day}`;
   };
 
-  const [formData, setFormData] = useState({
-    date: getTodayDate(),
-    startTime: '09:00',
-    endTime: '17:00',
-    title: { en: '', fr: '', pt: '' },
-    moderator: '',
-    speakers: '',
-    type: 'session',
-    published: true
-  });
+  // Initialiser le formData avec les langues disponibles
+  const getInitialFormData = () => {
+    const titleObj = {};
+    config.languages.available.forEach(lang => {
+      titleObj[lang] = '';
+    });
+
+    return {
+      date: getTodayDate(),
+      startTime: '09:00',
+      endTime: '17:00',
+      title: titleObj,
+      moderator: '',
+      speakers: '',
+      type: config.eventTypes[0].id,
+      published: true
+    };
+  };
+
+  const [formData, setFormData] = useState(getInitialFormData());
 
   useEffect(() => {
     const eventsRef = ref(database, 'events');
@@ -75,27 +87,20 @@ function AdminPanel({ onLogout }) {
   };
 
   const resetForm = () => {
-    setFormData({
-      date: getTodayDate(),
-      startTime: '09:00',
-      endTime: '17:00',
-      title: { en: '', fr: '', pt: '' },
-      moderator: '',
-      speakers: '',
-      type: 'session',
-      published: true
-    });
+    setFormData(getInitialFormData());
     setEditingId(null);
     setShowForm(false);
-    setActiveTab('en');
+    setActiveTab(config.languages.default);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.date || !formData.startTime || !formData.endTime ||
-        !formData.title.en || !formData.title.fr || !formData.title.pt) {
-      alert('Please fill all required fields in all languages (title is required in all 3 languages)');
+    // Vérifier que tous les titres dans toutes les langues sont remplis
+    const allTitlesFilled = config.languages.available.every(lang => formData.title[lang]);
+
+    if (!formData.date || !formData.startTime || !formData.endTime || !allTitlesFilled) {
+      alert(`Please fill all required fields in all languages (${config.languages.available.length} languages)`);
       return;
     }
 
@@ -117,11 +122,16 @@ function AdminPanel({ onLogout }) {
   };
 
   const handleEdit = (event) => {
+    const titleObj = {};
+    config.languages.available.forEach(lang => {
+      titleObj[lang] = event.title?.[lang] || '';
+    });
+
     setFormData({
       date: event.date,
       startTime: event.startTime,
       endTime: event.endTime,
-      title: event.title || { en: '', fr: '', pt: '' },
+      title: titleObj,
       moderator: event.moderator || '',
       speakers: event.speakers || '',
       type: event.type,
@@ -129,7 +139,7 @@ function AdminPanel({ onLogout }) {
     });
     setEditingId(event.id);
     setShowForm(true);
-    setActiveTab('en');
+    setActiveTab(config.languages.default);
   };
 
   const handleDelete = async (id) => {
@@ -146,15 +156,17 @@ function AdminPanel({ onLogout }) {
   };
 
   const handleDuplicate = (event) => {
+    const titleObj = {};
+    config.languages.available.forEach(lang => {
+      const copyText = lang === 'en' ? 'copy' : lang === 'fr' ? 'copie' : 'cópia';
+      titleObj[lang] = `${event.title?.[lang] || ''} (${copyText})`;
+    });
+
     setFormData({
       date: event.date,
       startTime: event.startTime,
       endTime: event.endTime,
-      title: {
-        en: `${event.title?.en || ''} (copy)`,
-        fr: `${event.title?.fr || ''} (copie)`,
-        pt: `${event.title?.pt || ''} (cópia)`
-      },
+      title: titleObj,
       moderator: event.moderator || '',
       speakers: event.speakers || '',
       type: event.type,
@@ -162,7 +174,7 @@ function AdminPanel({ onLogout }) {
     });
     setEditingId(null);
     setShowForm(true);
-    setActiveTab('en');
+    setActiveTab(config.languages.default);
   };
 
   const togglePublished = async (id, currentStatus) => {
@@ -178,16 +190,22 @@ function AdminPanel({ onLogout }) {
 
   const getDisplayValue = (value) => {
     if (typeof value === 'object' && value !== null) {
-      return value.en || value.fr || value.pt || '';
+      return value[config.languages.default] || value[config.languages.available[0]] || '';
     }
     return value || '';
   };
+
+  const getEventTypeConfig = (typeId) => {
+    return config.eventTypes.find(type => type.id === typeId) || config.eventTypes[0];
+  };
+
+  const currentEventType = getEventTypeConfig(formData.type);
 
   return (
       <div className="min-h-screen bg-gray-100 py-8 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="bg-white rounded-lg shadow-md p-6 mb-6 flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-800">🔧 Admin Panel</h1>
+            <h1 className="text-3xl font-bold text-gray-800">🔧 Admin Panel - {config.event.name}</h1>
             <button
                 onClick={onLogout}
                 className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
@@ -218,15 +236,15 @@ function AdminPanel({ onLogout }) {
                   {editingId ? '✏️ Edit Event' : '➕ New Event'}
                 </h2>
 
-                {/* Language Tabs - Only for Title */}
+                {/* Language Tabs */}
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 mb-2">
-                    💡 Only the <strong>title</strong> needs to be translated in 3 languages. Moderators and speakers remain the same.
+                    💡 Only the <strong>title</strong> needs to be translated in {config.languages.available.length} languages. Moderators and speakers remain the same.
                   </p>
                 </div>
 
                 <div className="flex gap-2 mb-6 border-b border-gray-200">
-                  {['en', 'fr', 'pt'].map(lang => (
+                  {config.languages.available.map(lang => (
                       <button
                           key={lang}
                           type="button"
@@ -237,7 +255,7 @@ function AdminPanel({ onLogout }) {
                                   : 'text-gray-500 hover:text-gray-700'
                           }`}
                       >
-                        {lang === 'en' ? '🇬🇧 English' : lang === 'fr' ? '🇫🇷 Français' : '🇵🇹 Português'}
+                        {lang.toUpperCase()}
                       </button>
                   ))}
                 </div>
@@ -253,8 +271,11 @@ function AdminPanel({ onLogout }) {
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           required
                       >
-                        <option value="session">Session (with speakers)</option>
-                        <option value="break">Break (Lunch, Coffee, etc.)</option>
+                        {config.eventTypes.map(type => (
+                            <option key={type.id} value={type.id}>
+                              {type.label[config.languages.default] || type.label.en}
+                            </option>
+                        ))}
                       </select>
                     </div>
 
@@ -313,7 +334,7 @@ function AdminPanel({ onLogout }) {
                   <div className="border-t pt-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Title * ({activeTab === 'en' ? 'English' : activeTab === 'fr' ? 'Français' : 'Português'})
+                        Title * ({activeTab.toUpperCase()})
                       </label>
                       <input
                           type="text"
@@ -321,44 +342,48 @@ function AdminPanel({ onLogout }) {
                           value={formData.title[activeTab]}
                           onChange={(e) => handleInputChange(e, activeTab)}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                          placeholder={activeTab === 'en' ? 'Ex: Opening Session' : activeTab === 'fr' ? 'Ex: Session d\'ouverture' : 'Ex: Sessão de Abertura'}
+                          placeholder={`Enter title in ${activeTab.toUpperCase()}`}
                           required
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Switch tabs to enter the title in all 3 languages
+                        Switch tabs to enter the title in all {config.languages.available.length} languages
                       </p>
                     </div>
 
-                    {/* Moderator & Speakers - Same for all languages */}
-                    {formData.type === 'session' && (
+                    {/* Moderator & Speakers - Conditional based on event type */}
+                    {(currentEventType.hasModeratorField || currentEventType.hasSpeakersField) && (
                         <div className="grid grid-cols-2 gap-4 mt-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Moderator <span className="text-gray-400">(same in all languages)</span>
-                            </label>
-                            <input
-                                type="text"
-                                name="moderator"
-                                value={formData.moderator}
-                                onChange={handleInputChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Ex: John Doe, Jean Dupont, João Silva"
-                            />
-                          </div>
+                          {currentEventType.hasModeratorField && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Moderator <span className="text-gray-400">(same in all languages)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="moderator"
+                                    value={formData.moderator}
+                                    onChange={handleInputChange}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Ex: John Doe, Jean Dupont, João Silva"
+                                />
+                              </div>
+                          )}
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Speakers <span className="text-gray-400">(same in all languages)</span>
-                            </label>
-                            <input
-                                type="text"
-                                name="speakers"
-                                value={formData.speakers}
-                                onChange={handleInputChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Ex: Jane Smith, Marie Martin, Maria Santos"
-                            />
-                          </div>
+                          {currentEventType.hasSpeakersField && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Speakers <span className="text-gray-400">(same in all languages)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="speakers"
+                                    value={formData.speakers}
+                                    onChange={handleInputChange}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Ex: Jane Smith, Marie Martin, Maria Santos"
+                                />
+                              </div>
+                          )}
                         </div>
                     )}
                   </div>
@@ -394,91 +419,94 @@ function AdminPanel({ onLogout }) {
                 </p>
             ) : (
                 <div className="space-y-4">
-                  {events.map((event) => (
-                      <div
-                          key={event.id}
-                          className={`border-2 rounded-lg p-4 ${
-                              event.type === 'break'
-                                  ? 'border-orange-300 bg-orange-50'
-                                  : 'border-blue-300 bg-blue-50'
-                          }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2 flex-wrap">
+                  {events.map((event) => {
+                    const eventTypeConfig = getEventTypeConfig(event.type);
+
+                    return (
+                        <div
+                            key={event.id}
+                            className="border-2 rounded-lg p-4"
+                            style={{
+                              borderColor: eventTypeConfig.color,
+                              backgroundColor: `${eventTypeConfig.color}20`
+                            }}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2 flex-wrap">
                         <span className="bg-gray-700 text-white px-3 py-1 rounded text-sm font-semibold">
                           {event.startTime} - {event.endTime}
                         </span>
-                              <span className="bg-gray-200 px-3 py-1 rounded text-sm">
+                                <span className="bg-gray-200 px-3 py-1 rounded text-sm">
                           {event.date}
                         </span>
-                              <span className={`${
-                                  event.published !== false
-                                      ? 'bg-green-200 text-green-800'
-                                      : 'bg-gray-300 text-gray-700'
-                              } px-3 py-1 rounded text-sm font-semibold`}>
+                                <span className={`${
+                                    event.published !== false
+                                        ? 'bg-green-200 text-green-800'
+                                        : 'bg-gray-300 text-gray-700'
+                                } px-3 py-1 rounded text-sm font-semibold`}>
                           {event.published !== false ? '✅ Published' : '📝 Draft'}
                         </span>
+                              </div>
+
+                              {config.languages.available.map((lang, index) => (
+                                  <div key={lang} className="mb-2">
+                                    <span className="text-xs text-gray-500 uppercase">{lang}:</span>
+                                    <h3 className="text-lg font-bold text-gray-800">
+                                      {typeof event.title === 'object' ? event.title[lang] : event.title}
+                                    </h3>
+                                  </div>
+                              ))}
+
+                              {(eventTypeConfig.hasModeratorField || eventTypeConfig.hasSpeakersField) && (
+                                  <div className="text-gray-700 space-y-1 text-sm mt-2">
+                                    {eventTypeConfig.hasModeratorField && event.moderator && (
+                                        <p><span className="font-semibold">Moderator:</span> {event.moderator}</p>
+                                    )}
+                                    {eventTypeConfig.hasSpeakersField && event.speakers && (
+                                        <p><span className="font-semibold">Speakers:</span> {event.speakers}</p>
+                                    )}
+                                  </div>
+                              )}
                             </div>
 
-                            <h3 className="text-xl font-bold text-gray-800 mb-2">
-                              🇬🇧 {getDisplayValue(event.title)}
-                            </h3>
-                            <p className="text-sm text-gray-600 mb-1">
-                              🇫🇷 {typeof event.title === 'object' ? event.title.fr : ''}
-                            </p>
-                            <p className="text-sm text-gray-600 mb-2">
-                              🇵🇹 {typeof event.title === 'object' ? event.title.pt : ''}
-                            </p>
+                            <div className="flex gap-2 ml-4 flex-wrap">
+                              <button
+                                  onClick={() => handleEdit(event)}
+                                  className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors text-sm"
+                              >
+                                ✏️ Edit
+                              </button>
 
-                            {event.type === 'session' && (
-                                <div className="text-gray-700 space-y-1 text-sm">
-                                  {event.moderator && (
-                                      <p><span className="font-semibold">Moderator:</span> {event.moderator}</p>
-                                  )}
-                                  {event.speakers && (
-                                      <p><span className="font-semibold">Speakers:</span> {event.speakers}</p>
-                                  )}
-                                </div>
-                            )}
-                          </div>
+                              <button
+                                  onClick={() => handleDuplicate(event)}
+                                  className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 transition-colors text-sm"
+                              >
+                                📋 Duplicate
+                              </button>
 
-                          <div className="flex gap-2 ml-4 flex-wrap">
-                            <button
-                                onClick={() => handleEdit(event)}
-                                className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors text-sm"
-                            >
-                              ✏️ Edit
-                            </button>
+                              <button
+                                  onClick={() => togglePublished(event.id, event.published !== false)}
+                                  className={`${
+                                      event.published !== false
+                                          ? 'bg-orange-500 hover:bg-orange-600'
+                                          : 'bg-green-500 hover:bg-green-600'
+                                  } text-white px-4 py-2 rounded transition-colors text-sm`}
+                              >
+                                {event.published !== false ? '📝 Draft' : '✅ Publish'}
+                              </button>
 
-                            <button
-                                onClick={() => handleDuplicate(event)}
-                                className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 transition-colors text-sm"
-                            >
-                              📋 Duplicate
-                            </button>
-
-                            <button
-                                onClick={() => togglePublished(event.id, event.published !== false)}
-                                className={`${
-                                    event.published !== false
-                                        ? 'bg-orange-500 hover:bg-orange-600'
-                                        : 'bg-green-500 hover:bg-green-600'
-                                } text-white px-4 py-2 rounded transition-colors text-sm`}
-                            >
-                              {event.published !== false ? '📝 Draft' : '✅ Publish'}
-                            </button>
-
-                            <button
-                                onClick={() => handleDelete(event.id)}
-                                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors text-sm"
-                            >
-                              🗑️ Delete
-                            </button>
+                              <button
+                                  onClick={() => handleDelete(event.id)}
+                                  className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors text-sm"
+                              >
+                                🗑️ Delete
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                  ))}
+                    );
+                  })}
                 </div>
             )}
           </div>

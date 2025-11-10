@@ -138,6 +138,28 @@
     margin-bottom: 3rem;
 }
 
+/* Logo styles */
+.timeline-logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    animation: fadeInFromBlur 0.8s ease-out both;
+}
+
+.logo-image {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.timeline-container.mobile .timeline-logo {
+    margin-bottom: 1rem;
+}
+
+.timeline-logo + .timeline-title {
+    animation-delay: 0.3s;
+}
+
 .timeline-container.mobile .timeline-header {
     margin-bottom: 2rem;
 }

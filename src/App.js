@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import Login from './components/Login';
 import AdminPanel from './components/AdminPanel';
-import TimelineViewer from './components/TimelineViewer';
+import TimelineViewer from './components/viewer/TimelineViewer';
+import {ConfigProvider} from "./contexts/ConfigContext";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -30,14 +31,18 @@ function App() {
   };
 
   return (
-    <div className="App">
-      {/* Mode Admin */}
-      {showAdminLogin && !isAdmin && <Login onLogin={handleLogin} />}
-      {isAdmin && <AdminPanel onLogout={handleLogout} />}
-      
-      {/* Mode Spectateur (par défaut) */}
-      {!showAdminLogin && !isAdmin && <TimelineViewer />}
-    </div>
+      <ConfigProvider>
+        <div className="App">
+          {/* Écran de connexion admin */}
+          {showAdminLogin && !isAdmin && <Login onLogin={handleLogin} />}
+
+          {/* Panel admin (après connexion) */}
+          {isAdmin && <AdminPanel onLogout={handleLogout} />}
+
+          {/* Timeline publique (mode normal) */}
+          {!showAdminLogin && !isAdmin && <TimelineViewer />}
+        </div>
+      </ConfigProvider>
   );
 }
 
